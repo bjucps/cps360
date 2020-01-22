@@ -41,4 +41,5 @@ user/bin/
 tools/mkfs
 version
 
+!.vscode
 .vscode/ipch
