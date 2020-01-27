@@ -577,11 +577,11 @@ namex(char *path, int nameiparent, char *name)
     ip = idup(proc->cwd);
 
   while((path = skipelem(path, name)) != 0){
-    if (ip->dev == ROOTDEV && ip->inum == ROOTINO && strncmp(name, "d", 1) == 0) {
-      iput(ip);
-      ip = iget(2, ROOTINO);
-      continue;
-    }
+    // if (ip->dev == ROOTDEV && ip->inum == ROOTINO && strncmp(name, "d", 1) == 0) {
+    //   iput(ip);
+    //   ip = iget(2, ROOTINO);
+    //   continue;
+    // }
 
     ilock(ip);
     if(ip->type != T_DIR){
