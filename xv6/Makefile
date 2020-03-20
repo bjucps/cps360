@@ -196,7 +196,7 @@ fs:
 fs/%: user/bin/% | fs
 	cp $< $@
 
-fs/README: README.md | fs
+fs/README.md: README.md | fs
 	cp $< $@
 
 USER_BINS := $(notdir $(USER_PROGS))
