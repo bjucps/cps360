@@ -103,8 +103,8 @@ ssize_t emoticon_write(struct file *filp, const char *buf,
 			    
   printk("<1>emoticon_write: count = %ld\n", count);
   			    
-  if (count > 80) 
-	count = 80;
+  if (count > sizeof(data)) 
+	count = sizeof(data);
 	  
   copy_from_user(data,buf,count);
 
