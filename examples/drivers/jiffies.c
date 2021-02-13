@@ -103,6 +103,7 @@ ssize_t jiffies_read(struct file *filp, char *buf,
   if (count > available_to_read) {
     count = available_to_read;
   }
+  printk(KERN_ALERT "jiffies: transferring %d bytes to user from offset %d", (int)count, (int)*f_pos);
   copy_to_user(buf,filp->private_data + *f_pos,count);
 
   *f_pos+=count; 
