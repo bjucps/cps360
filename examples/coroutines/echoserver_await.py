@@ -13,7 +13,7 @@ async def handle_echo(reader, writer):
 
     print(f"Send: {message!r}")
     writer.write(data)
-    #await writer.drain()
+    await writer.drain()
 
     print("Closing the connection...")
     writer.close()

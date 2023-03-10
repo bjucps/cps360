@@ -16,6 +16,8 @@ def produce_randnums_lazy():
         print('After yield... num = ',num)
 
 def main():
+    for number in produce_randnums_eager():
+        print(number)
     for number in produce_randnums_lazy():
         print(number)
 
