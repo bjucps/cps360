@@ -8,6 +8,7 @@ def squarez():
         sofar += x**2
         print(f"{x}**2 == {x**2} ({sofar} so far)")
         x = yield x**2 # yield the square of the last sent-value; wait for next
+    return sofar
 
 
 def main():
@@ -17,6 +18,12 @@ def main():
     # send 0..9 to the coroutine in sequence
     for i in range(10):
         print("coroutine yielded ->",sq.send(i))
+
+    print('(sending "end" signal to coroutine)')
+    try:
+        sq.send(None) # give coroutine the "end" signal
+    except StopIteration as stop:
+        print("coroutine returned ->", stop.value)
 
 
 if __name__ == "__main__":

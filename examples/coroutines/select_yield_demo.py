@@ -32,9 +32,7 @@ class EventLoop:
         """run one cycle of the event loop"""
         # pump I/O events to see if any I/O needs to happen
         for event, _ in self._sel.select(timeout):
-            coroutine, sendee, throwee = event.data()
-            if coroutine:
-                self.enqueue(coroutine, sendee, throwee)
+            event.data()  # the data item is a callback that handles re-scheduling
 
         # dispatch all queued coroutines
         while self._tasks:
@@ -49,8 +47,9 @@ class EventLoop:
             except: # also let it die
                 traceback.print_exc()
             else: # invoke one of our async operation methods to queue I/O (etc.)
+                # (hat tip to David Beazley's coroutine talks for this idea)
                 op, *args = yielded
-                getattr(self, op)(coroutine, *args)
+                getattr(self, op)(coroutine, *args) # TODO: nicer error handling
 
     def enqueue(self, coro, sendee=None, throwee=None):
         """public API to add a coroutine into the scheduler queue"""
@@ -72,9 +71,9 @@ class EventLoop:
             try:
                 conn, addr = listener_sock.accept()
                 conn.setblocking(False)
-                return coro, (conn, addr), None
+                self.enqueue(coro, (conn, addr))
             except Exception as ex:
-                return coro, None, ex
+                self.enqueue(coro, None, ex)
         self._sel.register(listener_sock, selectors.EVENT_READ, _callback)
 
     def async_recv(self, coro, sock, size):
@@ -86,9 +85,9 @@ class EventLoop:
         def _callback():
             self._sel.unregister(sock)
             try:
-                return coro, sock.recv(size), None
+                self.enqueue(coro, sock.recv(size))
             except Exception as ex:
-                return coro, None, ex
+                self.enqueue(coro, None, ex)
         self._sel.register(sock, selectors.EVENT_READ, _callback)
 
     def async_send(self, coro, sock, buff):
@@ -100,9 +99,9 @@ class EventLoop:
         def _callback():
             self._sel.unregister(sock)
             try:
-                return coro, sock.send(buff), None
+                self.enqueue(coro, sock.send(buff))
             except Exception as ex:
-                return coro, None, ex
+                self.enqueue(coro, None, ex)
         self._sel.register(sock, selectors.EVENT_WRITE, _callback)
 
     
