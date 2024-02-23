@@ -102,7 +102,7 @@ class EchoSessionProtocol(Protocol):
     def on_writable(self):
         print(f"{self._peer}: echoing {len(self._buff)} bytes...")
         sent = self._sock.send(self._buff)
-        self._buff = self._buff[sent:]
+        del self._buff[:sent]
 
 
 def main():
