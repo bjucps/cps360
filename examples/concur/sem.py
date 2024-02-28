@@ -2,7 +2,10 @@
 import random
 import threading
 import time
+import sys
 from collections import deque
+
+ITEMS = ["trench coats", "pork pies", "race cars", "cheese pizzas", "hub caps", "ladder jacks", "pickle jars", "waffle irons"]
 
 
 class MySemaphore:
@@ -17,61 +20,90 @@ class MySemaphore:
         else:
             self._max_n = max_n
         self._cv = threading.Condition(threading.Lock())
+        self._wakeups = 0    # hat tip: The Little Book of Semaphores
 
-    def p(self):
+    def wait(self):
         with self._cv:
             self._n -= 1
-            while self._n < 0:
-                self._cv.wait()
+            if self._n < 0:
+                while True:
+                    self._cv.wait()
+                    if self._wakeups >= 1:
+                        break
+                self._wakeups -= 1
 
-    def v(self):
+    def post(self):
         with self._cv:
             self._n += 1
             if self._n > self._max_n:
                 raise ValueError("exceeded max_n")
             if self._n <= 0:
-                self._cv.notify_all()
+                self._wakeups += 1
+                self._cv.notify()
 
 
-def consumer(q: deque, full_sem: MySemaphore, empty_sem: MySemaphore):
+def consumer(i: int, q: deque, full_sem: MySemaphore, empty_sem: MySemaphore):
     while True:
-        full_sem.p()
+        full_sem.wait()
         item = q.popleft()
-        empty_sem.v()
-        print(f"Consumer: got {item}")
+        empty_sem.post()
         if item is None:
+            print(f"Consumer #{i}: DONE")
             return
-        #time.sleep(random.random())
+        cnt, name = item
+        print(f"Consumer #{i}: consuming {cnt} {name}")
+        time.sleep(cnt / 10)
 
 
-def producer(q: deque, full_sem: MySemaphore, empty_sem: MySemaphore):
-    for value in range(1, 101):
-        empty_sem.p()
-        q.append(value)
-        full_sem.v()
-        print(f"Producer: sent {value}")
-        #time.sleep(random.random() * 0.1)
-    empty_sem.p()
-    q.append(None)
-    full_sem.v()
-    print(f"Producer: done (sent None)")
+def producer(i: int, q: deque, full_sem: MySemaphore, empty_sem: MySemaphore, items: int):
+    for _ in range(items):
+        cnt = random.randrange(1, 10)
+        name = random.choice(ITEMS)
+        empty_sem.wait()
+        q.append((cnt, name))
+        full_sem.post()
+        print(f"Producer #{i}: sent {cnt} {name}")
+    print(f"Producer #{i}: DONE")
 
 
-def main():
-    full_sem = MySemaphore(0, max_n=5)
-    empty_sem = MySemaphore(5)
+def main(argv):
+    try:
+        N = int(argv[1])
+        P = int(argv[2])
+        C = int(argv[3])
+        M = int(argv[4])
+    except (IndexError, ValueError):
+        print(f"usage: {argv[0]} NUM_SLOTS NUM_PRODUCERS NUM_CONSUMERS NUM_ITEMS")
+        sys.exit()
+
+    full_sem = MySemaphore(0, max_n=N)
+    empty_sem = MySemaphore(N)
     q = deque()
 
-    tp = threading.Thread(target=producer, args=(q, full_sem, empty_sem))
-    tc = threading.Thread(target=consumer, args=(q, full_sem, empty_sem))
+    producers = []
+    for i in range(P):
+        tp = threading.Thread(target=producer, args=(i + 1, q, full_sem, empty_sem, M))
+        tp.start()
+        producers.append(tp)
 
-    tc.start()
-    tp.start()
+    consumers = []
+    for i in range(C):
+        tc = threading.Thread(target=consumer, args=(i + 1, q, full_sem, empty_sem))
+        tc.start()
+        consumers.append(tc)
 
-    tp.join()
-    tc.join()
+    for p in producers:
+        p.join()
+
+    for _ in consumers:
+        empty_sem.wait()
+        q.append(None)
+        full_sem.post()
+    
+    for c in consumers:
+        c.join()
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv)
 
