@@ -51,7 +51,7 @@ def main():
             _, buff = conns[id(writesock)]              # look up send-buffer for this connection
             sent = writesock.send(buff)                 # write all the data if we can (track what we actually write)
             del buff[:sent]                             # chop off the transmitted data (in-place)
-            if not buff:                                # if the buffer is not EMPTY, remove this socket from the writable set (nothing to write)
+            if not buff:                                # if the buffer is EMPTY, remove this socket from the writable set (nothing to write)
                 writables.remove(writesock)
 
 

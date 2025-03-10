@@ -21,15 +21,24 @@ class MySemaphore:
             self._max_n = max_n
         self._cv = threading.Condition(threading.Lock())
         self._wakeups = 0    # hat tip: The Little Book of Semaphores
+        self._spurious_wakes = 0
+        self._time_sleeping_ns = 0
+
+    def report(self, name: str):
+        print(f"Semaphore '{name}' [{id(self)}]: {self._time_sleeping_ns:,} ns sleeping, {self._spurious_wakes} spurwakes")
 
     def wait(self):
         with self._cv:
             self._n -= 1
             if self._n < 0:
                 while True:
+                    ns1 = time.process_time_ns()
                     self._cv.wait()
+                    self._time_sleeping_ns += time.process_time_ns() - ns1
                     if self._wakeups >= 1:
                         break
+                    else:
+                        self._spurious_wakes += 1
                 self._wakeups -= 1
 
     def post(self):
@@ -103,6 +112,8 @@ def main(argv):
     for c in consumers:
         c.join()
 
+    full_sem.report("full_sem")
+    empty_sem.report("empty_sem")
 
 if __name__ == "__main__":
     main(sys.argv)
